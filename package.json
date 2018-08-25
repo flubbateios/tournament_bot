@@ -1,0 +1,29 @@
+{
+  "name": "patournaments-discord",
+  "version": "1.0.0",
+  "description": "",
+  "main": "init.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
+  },
+  "author": "flubb",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^3.0.2",
+    "eslint": "^5.2.0"
+  },
+  "dependencies": {
+    "bootstrap": "^4.1.1",
+    "bufferutil": "^4.0.0",
+    "discord.js": "^11.3.2",
+    "jquery": "^3.3.1",
+    "knockout": "^3.4.2",
+    "knockout-mapping": "^2.6.0",
+    "lodash": "^4.17.10",
+    "popper.js": "^1.14.3",
+    "request": "^2.87.0",
+    "request-promise-native": "^1.0.5",
+    "socket.io-client": "^2.1.1"
+  }
+}

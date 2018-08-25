@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+    <title>PATournaments</title>
+    <meta name="description" content="PA Tournaments">
+	<link rel="stylesheet" href="./node_modules/bootstrap/dist/css/bootstrap.min.css" />
+	<link rel="stylesheet" href="./main.css" />
+	<script src="./main.js"></script>
+</head>
+<body>
+	<nav class="navbar navbar-light bg-light">
+		<ul class="navbar-nav flex-row navbar-tournament-tabs">
+			<li class="nav-item navbar-text">
+				<a class="navbar-link" data-bind="click:selectedTab.bind(null,'log')" href="#">Log</a>
+			</li>
+			<li class="nav-item navbar-text">
+				<a class="navbar-link" data-bind="click:selectedTab.bind(null,'info')" href="#">Info</a>
+			</li>
+			<li class="nav-item navbar-text" data-bind="visible:canSeeTDSelect">
+				<a class="navbar-link" data-bind="click:selectedTab.bind(null,'tournament-select')" href="#">Tournaments</a>
+			</li>
+			<li class="nav-item navbar-text" data-bind="visible:canSeePlayerSelect">
+				<a class="navbar-link" data-bind="click:selectedTab.bind(null,'players')" href="#">Players</a>
+			</li>
+			<li class="nav-item navbar-text" data-bind="visible:tournamentStarted">
+				<a class="navbar-link" data-bind="click:selectedTab.bind(null,'tournament-main')" href="#">Run Tournament</a>
+			</li>
+		</ul>
+		<ul class="flex-row-reverse navbar-nav navbar-tournament-tabs">
+			<li class="nav-item navbar-text" data-bind="visible:discordOptions.clientConnected" style="color:LimeGreen">
+				<span>Discord OK</span>
+			</li>
+			<li class="nav-item navbar-text" data-bind="visible:!discordOptions.clientConnected()" style="color:Crimson">
+				<span>Discord</span>
+			</li>
+			<li class="nav-item navbar-text" data-bind="visible:!superStats.reportSockConnected()" style="color:Crimson">
+				<span>Super Stats Reporting</span>
+			</li>
+			<li class="nav-item navbar-text" data-bind="visible:superStats.reportSockConnected" style="color:LimeGreen">
+				<span>Super Stats Reporting OK</span>
+			</li>
+			<!-- ko if: canSeePlayerSelect -->
+			<li class="nav-item navbar-text">
+				<a class="navbar-link" data-bind="click:updatePhrases" href="#" style="color:DeepSkyBlue">Reload Phrases</a>
+			</li>
+			<li class="nav-item navbar-text">
+				<a class="navbar-link" data-bind="click:updateCurrentTournament" href="#" style="color:DeepSkyBlue">Reload Current Tournament</a>
+			</li>
+			<!-- /ko -->
+		</ul>
+	</nav>
+	<div class="content">
+		<div class="info-stuff content-box container" data-bind="visible:selectedTab() === 'info'">
+			<h1>Info</h1>
+			<h2>UberNet</h2>
+			<form data-bind="submit:testLoginToUbernet">
+				<input type="text" class="text-field" data-bind="textInput:uberNet.username,disable:uberNet.tested" placeholder="username"/>
+				<input type="password" class="text-field" data-bind="textInput:uberNet.password,disable:uberNet.tested" placeholder="password"/>
+				<input type="submit" data-bind="visible:!uberNet.tested()" class="btn btn-success"/>
+				<button data-bind="visible:uberNet.tested,click:uberNet.tested.bind(null,false)" class="btn btn-danger">Reset</button>
+				<b data-bind="visible:uberNet.tested" style="color:LimeGreen">OK</b>
+			</form>
+			<h2>Super Stats</h2>
+			<input type="text" class="api-key-field" data-bind="textInput:superStats.key,disable:superStats.loggedIn" placeholder="api key" disabled/>
+			<form data-bind="submit:loginToSuperStats">
+				<input type="text" class="text-field" data-bind="textInput:superStats.username,disable:superStats.loggedIn" placeholder="username"/>
+				<input type="password" class="text-field" data-bind="textInput:superStats.pass,disable:superStats.loggedIn" placeholder="password"/>
+				<input type="submit" data-bind="visible:!superStats.loggedIn()" class="btn btn-success"/>
+			</form>
+			<input type="text" class="text-field" data-bind="enable:superStats.loggedIn,textInput:superStats.tournamentIdentifier" placeholder="Tournament Identifier" />
+			<h2>Challonge</h2>
+			<div>
+				<input type="text" class="api-key-field" data-bind="textInput:challonge.key,disable:challonge.tested" placeholder="api key"/>
+				<button data-bind="click:testChallonge,visible:!challonge.tested()" class="btn btn-success">Test</button>
+				<button data-bind="click:challonge.tested.bind(null,false),visible:challonge.tested" class="btn btn-danger">Reset</button>
+				<b data-bind="visible:challonge.tested" style="color:LimeGreen">OK</b>
+			</div>
+			<h2>Discord</h2>
+			<div>
+				<input type="text" class="api-key-field" data-bind="textInput:discordOptions.token,disable:discordOptions.clientConnected" placeholder="token"/>
+				<input type="text" class="api-key-field" data-bind="textInput:discordOptions.webhookUrl" placeholder="webhook url"/>
+				<button data-bind="click:loginToDiscord,visible:!discordOptions.clientConnected()" class="btn btn-success">Connect</button>
+				<button data-bind="click:destroyDiscordClient,visible:discordOptions.clientConnected()" class="btn btn-danger">Disconnect</button><br/>
+				<label>Sending Messages</label><input type="checkbox" data-bind="checked:discordOptions.sendingMessages"/><br/>
+				<label>Use Webhook</label><input type="checkbox" data-bind="checked:discordOptions.useWebhook"/>
+			</div>
+			<h2>Working Directory</h2>
+			<div>
+				<input type="text" class="api-key-field" data-bind="value:workingDirectory" disabled />
+				<button data-bind="click:selectWorkingDirectory" class="btn btn-primary">Select</button>
+			</div>
+			<button data-bind="click:autoFill" class="btn btn-primary">Load from file</button>
+		</div>
+		<div class="content-box container tournament-select-tab" data-bind="if:selectedTab() === 'tournament-select'">
+			<h1>Tournament Select & Discord Channel</h1>
+			<div class="discord-tournament-select">
+				<div class="content-box">
+					<div style="font-size:20px;">
+						<span>Selected Tournament: </span>
+						<span data-bind="text:currentTournament() ? currentTournament().name : 'None' "></span>
+					</div>
+					<button class="btn btn-primary" style="font-size:20px" data-bind="click:getTournaments">Refresh</button>
+					<table class="table tournaments-list table-striped">
+						<thead>
+							<tr>
+								<th scope="col">Name</th>
+							</tr>
+						</thead>
+						<tbody>
+							<!-- ko foreach: tournaments.availableTournaments -->
+							<tr scope="row">
+								<th><a data-bind="text:name,click:$root.selectTournamentId.bind($root,$data)" href="#"></a></th>
+							</tr>
+							<!-- /ko -->
+						</tbody>
+					</table>
+				</div>
+				<div class="content-box">
+					<div style="font-size:20px;">
+						<span>Selected Channel: </span>
+						<span data-bind="text:discordOptions.announceChannelName"></span>
+					</div>
+					<button class="btn btn-primary" style="font-size:20px" data-bind="click:getDiscordChannels">Refresh</button>
+					<table class="table tournaments-list table-striped discord-channel-list">
+						<thead>
+							<tr>
+								<th scope="col">Name</th>
+								<th scope="col">Server</th>
+							</tr>
+						</thead>
+						<tbody>
+							<!-- ko foreach: discordOptions.channels -->
+							<tr scope="row">
+								<th><a data-bind="text:name,click:$root.selectDiscordChannel.bind($root,$data)" href="#"></a></th>
+								<th data-bind="text:guild"></th>
+							</tr>
+							<!-- /ko -->
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+		</div>
+		<div class="content-box container player-tab" data-bind="if:selectedTab() === 'players'">
+			<h1>Players</h1>
+			<div class="player-manage-parent">
+				<div class="player-table">
+					<table class="table table-striped player-list-table">
+						<thead>
+							<tr>
+								<th scope="col">Team Name</th>
+								<th scope="col">Player Names</th>
+								<th scope="col">Discord Usernames</th>
+								<th scope="col">Uber Ids</th>
+								<th scope="col">Discord Ids</th>
+								<th scope="col">Seed</th>
+								<th scope="col">Info</th>
+							</tr>
+						</thead>
+						<tbody data-bind="foreach:teams">
+							<tr>
+								<th data-bind="text:teamName"></th>
+								<th>
+									<div data-bind="foreach:players" class="loopcell">
+										<span data-bind="text:displayName"></span>
+									</div>
+								</th>
+								<th>
+									<div data-bind="foreach:players" class="loopcell">
+										<span data-bind="text:discordUsername"></span>
+									</div>
+								</th>
+								<th>
+									<div class="loopcell" data-bind="foreach:players">
+										<div style="min-height:25px">
+											<!-- ko if:$root.teamsEditMode -->
+											<input type="text" data-bind="value:uberId" placeholder="uber id"/>
+											<!-- /ko -->
+											<!-- ko if: uberId() && !$root.teamsEditMode() -->
+											<span data-bind="text:uberId" style="font-size:10px"></span>
+											<!-- /ko -->
+										</div>
+									</div>
+								</th>
+								<th >
+									<div class="loopcell" data-bind="foreach:players">
+										<div style="min-height:25px">
+											<!-- ko if:$root.teamsEditMode -->
+											<input type="text" data-bind="value:discordId" placeholder="discord id" />
+											<!-- /ko -->
+											<!-- ko if: discordId() && !$root.teamsEditMode() -->
+											<span data-bind="text:discordId" style="font-size:10px"></span>
+											<!-- /ko -->
+										</div>
+									</div>
+								</th>
+								<th>
+									<!-- ko if:$root.teamsEditMode -->
+									<input type="text" data-bind="value:seed" placeholder="Seed" />
+									<!-- /ko -->
+									<!-- ko if: !$root.teamsEditMode() -->
+									<span class="team-seed" data-bind="text:seed"></span>
+									<!-- /ko -->
+								</th>
+								<th>
+									<div class="loopcell" data-bind="foreach:players">
+										<span>
+											<img src="./data/thumbsup.png" data-bind="visible:checkedIn,tooltip:{title:'Checked In'}" style="width:36px;height:36px;" />
+											<img src="./data/thumbsdown.png" data-bind="visible:!checkedIn(),tooltip:{title:'Not Checked In'}" style="width:36px;height:36px;" />
+											
+										</span>
+									</div>
+									<button class="btn btn-danger" data-bind="event:{dblclick:$root.removeTeam.bind($root,$data)},visible:!$root.lockedTeams() || $root.checkin.checkingIn()">Remove Team</button>
+								</th>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="player-manage-buttons">
+					<div>
+						<span data-bind="text:playersNumber"></span>
+						<span> of </span>
+						<span data-bind="text:expectedPlayers"></span><br/>
+						<span data-bind="text:teamsNumber"></span><span> Teams</span><br/>
+					</div>
+					<div data-bind="visible:!lockedTeams()" class="button-bank">
+						<b>Team Size</b><input type="text" data-bind="textInput:teamSize" style="width:100px;" /><br />
+						<button class="btn btn-success" data-bind="click:openLoadFromCSV">Load from CSV</button><br/>
+						<button class="btn btn-success" data-bind="click:openLoadFromJSON">Load from JSON</button><br/>
+						<button class="btn btn-success" data-bind="click:openSaveJSON">Save JSON</button><br/>
+						<button class="btn btn-warning" data-bind="visible:!teamsEditMode(),click:teamsEditMode.bind(null,true)">Edit Mode</button>
+						<button class="btn btn-warning" data-bind="visible:teamsEditMode,click:teamsEditMode.bind(null,false)">Exit Edit Mode</button>
+					</div>
+					<div class="button-bank">
+						<button class="btn btn-primary" data-bind="click:syncTeams">Sync with Challonge</button>
+					</div>
+					<div data-bind="visible:canSeeCheckIn() && !tournamentStarted()" class="button-bank">
+						<h3>Check In</h3>
+						<button class="btn btn-warning" data-bind="click:checkInStart,visible:!checkin.checkingIn()">Start Check In</button>
+						<button class="btn btn-warning" data-bind="click:checkInStop,visible:checkin.checkingIn">Stop Check In</button>
+						<button class="btn btn-danger" data-bind="event:{dblclick:doCheckInRound},visible:checkin.checkingIn">Do Check In Round (DO NOT PRESS NORMALLY)</button>
+						<button class="btn btn-success" data-bind="click:sendCheckinMessage,visible:checkin.checkingIn">Send Discord Messages</button>
+						<button class="btn btn-warning" data-bind="click:startTournament,visible:!checkin.checkingIn() && !tournamentStarted()">START TOURNAMENT</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="tournament-main content-box" data-bind="if:selectedTab() === 'tournament-main'">
+			<h1>Run Tournament</h1>
+			<div class="player-manage-parent">
+				<div class="announceable-matches-table">
+					<table class="table table-striped">
+						<thead>
+							<tr>
+								<th>Match Number</th>
+								<th>Players</th>
+								<th>Announce</th>
+								<th>Cast</th>
+							</tr>
+						</thead>
+						<tbody data-bind="foreach:matches.announceableMatches">
+							<tr>
+								<th data-bind="text:match_number"></th>
+								<th data-bind="text:players"></th>
+								<th>
+									<input type="checkbox" data-bind="checked:announce" />
+								</th>
+								<th>
+									<input type="checkbox" data-bind="checked:cast" />
+									<input type="text" data-bind="textInput:caster,visible:cast" />
+								</th>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="player-manage-buttons">
+					<div class="button-bank">
+						<button class="btn btn-success" data-bind="click:startReporting,visible:!reportingMatches()">Start Reporting</button>
+						<button class="btn btn-danger" data-bind="event:{dblclick:stopReporting},visible:reportingMatches">Stop Reporting</button>
+					</div>
+					<div class="button-bank">
+						<button class="btn btn-success" data-bind="click:announceSelectedGames">Announce Games</button>
+						<button class="btn btn-success" data-bind="click:announceCasts">Announce Casts</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="log" data-bind="if:selectedTab() === 'log'">
+			<table class="table table-striped" data-bind="foreach:tLog">
+				<tr>
+					<th data-bind="text:$data"></th>
+				</tr>
+			</table>
+		</div>
+	</div>
+</body>
+</html>
