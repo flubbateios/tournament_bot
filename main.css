@@ -1,0 +1,52 @@
+@font-face {
+	font-family: "Source-Sans";
+	src: url('./data/SourceSansPro-Regular.ttf.woff')
+}
+body{
+	font-family:'Source-Sans', 'sans-serif';
+}
+.content-box{
+	display:flex;
+	flex-direction:column;
+	align-items:center;
+}
+.api-key-field{
+	width:375px;
+}
+.tournaments-list{
+	margin-top:20px;
+}
+.discord-tournament-select{
+	display:flex;
+	justify-content:space-around;
+	width:100%;
+}
+.navbar-tournament-tabs>li{
+	margin-right:15px;
+	margin-left:15px;
+}
+.discord-channel-list{
+	height:70vh;
+	overflow-y:scroll;
+	display:block;
+	width:auto;
+}
+.loopcell{
+	display:flex;
+	flex-direction:column;
+}
+.loopcell>span{
+	margin-bottom:10px;
+}
+.player-manage-parent{
+	display:flex;
+}
+.player-manage-buttons{
+	margin-left:50px;
+}
+.button-bank{
+	margin-bottom:10px;
+}
+.player-list-table{
+	width:80vw;
+}
