@@ -17,7 +17,7 @@
     "bootstrap": "^4.1.1",
     "bufferutil": "^4.0.0",
     "discord.js": "^11.3.2",
-    "jquery": "^3.3.1",
+    "jquery": "^3.4.0",
     "knockout": "^3.4.2",
     "knockout-mapping": "^2.6.0",
     "lodash": "^4.17.10",
