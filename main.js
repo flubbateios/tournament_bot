@@ -153,7 +153,10 @@ class ViewModel {
 			announceChannel: false,
 			announceChannelName:ko.observable('None'),
 			clientConnected: ko.observable(false),
-			channels:ko.observableArray()
+			channels:ko.observableArray(),
+			sendingMessages:ko.observable(true),
+			useWebhook:ko.observable(false),
+			webhookUrl:ko.observable('')
 		};
 		this.discordClient.on('ready', () =>{
 			this.log('Connected to Discord');
@@ -277,7 +280,7 @@ class ViewModel {
 			}
 			return this.canSeePlayerSelect() && (found === checked);
 		});
-		this.additiveTeamProcessing = ko.observable(false);
+		//this.additiveTeamProcessing = ko.observable(false);
 		this.lockedTeams = ko.observable(false);
 		this.updateTimeout = setInterval(() => {
 			this.tournaments.selectedId() && this.updateCurrentTournament();
@@ -457,7 +460,7 @@ class ViewModel {
 					}catch(Err){}
 				}
 				const discordId = this.discordOptions.announceChannel.guild.members.find(r => r.user.tag.toLowerCase() === y.discordUsername().toLowerCase());
-				if (discordId) {
+				if (discordId && !y.discordId()) {
 					y.discordId(discordId.id);
 				}
 			}
@@ -478,15 +481,18 @@ class ViewModel {
 		this.teams(ko.mapping.fromJS(d)());
 		this.log('Loaded teams from backup.');
 	}
-	processCSVTeams(csv, add) {
+	processCSVTeams(csv) {
 		this.log('Processing CSV.');
 		const lineEnding = csv.includes('\r\n') ? '\r\n' : '\n';
 		let q = csv.split(lineEnding);
-		q = q.map(r => JSON.parse(`[${r}]`));
+		q = q.map(r => r.split(/(?<!\\),/));
+		console.log(q);
 		const start = q.shift().map(r => r.toLowerCase());
 		let discordUsernameIndex;
 		let displayNameIndex;
 		let teamNameIndex;
+		let seedIndex;
+		let discordIdIndex;
 		for (let x in start) {
 			if (start[x].includes('discord')) {
 				discordUsernameIndex = x;
@@ -498,6 +504,10 @@ class ViewModel {
 				displayNameIndex = x;
 			} else if (start[x].includes('team')) {
 				teamNameIndex = x;
+			} else if (start[x].includes('seed')) {
+				seedIndex = x;
+			} else if (start[x].includes('d_id')) {
+				discordIdIndex = x;
 			}
 		}
 		if (!(displayNameIndex && discordUsernameIndex)) {
@@ -505,23 +515,28 @@ class ViewModel {
 		}
 		const teams = {};
 		this.log(`Found ${q.length} players`);
-		let teamIdCounter = add ? Object.keys(this.teams()).length + 1 : 1;
+		//let teamIdCounter = add ? Object.keys(this.teams()).length + 1 : 1;
+		let teamIdCounter = 1;
 		for (let x of q) {
 			const teamName = teamNameIndex ? x[teamNameIndex] : x[displayNameIndex];
 			const displayName = x[displayNameIndex];
 			const discordUsername = x[discordUsernameIndex];
+			const seed = seedIndex ? Number(x[seedIndex]) : 0;
+			const discordId = discordIdIndex ? x[discordIdIndex].toString() : '';
 			if (!teams[teamName]) {
 				teams[teamName] = {
 					teamName: teamName,
 					players: [],
-					id: teamIdCounter
+					id: teamIdCounter,
+					seed:0
 				};
 				teamIdCounter++;
 			}
+			teams[teamName].seed += seed;
 			teams[teamName].players.push({
 				displayName: displayName,
 				discordUsername: discordUsername,
-				discordId: '',
+				discordId: discordId,
 				uberId: '',
 				checkedIn: false
 			});
@@ -545,7 +560,9 @@ class ViewModel {
 		const body = {
 			api_key: this.challonge.key()
 		};
-		body.participants = ko.mapping.toJS(this.teams()).map(r => {
+		const parts = ko.mapping.toJS(this.teams());
+		parts.sort((a,b) => b.seed-a.seed);
+		body.participants = parts.map(r => {
 			return {
 				name: r.teamName,
 				misc: r.id
@@ -595,13 +612,36 @@ class ViewModel {
 		if (!this.phrases[phrasename].length) {
 			return;
 		}
+		
 		options = options || {};
 		let phrase = this.phrases[phrasename];
 		for (let key of Object.keys(options)) {
 			const value = options[key];
 			phrase = phrase.replaceAll(key, value);
 		}
-		this.discordOptions.announceChannel.send(phrase);
+		if(this.discordOptions.sendingMessages()){
+			this.discordOptions.announceChannel.send(phrase);
+		}
+		if(this.discordOptions.useWebhook() && this.discordOptions.webhookUrl()){
+			request({
+				method:'POST',
+				url:this.discordOptions.webhookUrl(),
+				json:true,
+				body:{
+					content:phrase
+				}
+			});
+		}
+		
+	}
+	formatMessage(phrasename,options){
+		options = options || {};
+		let phrase = this.phrases[phrasename];
+		for (let key of Object.keys(options)) {
+			const value = options[key];
+			phrase = phrase.replaceAll(key, value);
+		}
+		return phrase;
 	}
 	findPlayerByDiscordId(discordId, t) {
 		for (let x of this.teams()) {
@@ -690,8 +730,17 @@ class ViewModel {
 		}
 	}
 	async announceSelectedGames() {
+		let paste = '';
 		for (let x of this.matches.announceableMatches()) {
 			if (x.announce()) {
+				const p = this.formatMessage('Match-Announce', {
+					'%number%': x.match_number,
+					'%team1%': x.player1_discord_ids.map(r => `<@${r}>`).join(', '),
+					'%team2%': x.player2_discord_ids.map(r => `<@${r}>`).join(', '),
+					'%onmap%': ''
+				});
+				paste += p;
+				paste += '\n';
 				await this.sendDiscordMessage('Match-Announce', {
 					'%number%': x.match_number,
 					'%team1%': x.player1_discord_ids.map(r => `<@${r}>`).join(', '),
@@ -703,8 +752,17 @@ class ViewModel {
 		return true;
 	}
 	async announceCasts() {
+		let paste = '';
 		for (let x of this.matches.announceableMatches()) {
 			if (x.cast()) {
+				const p = this.formatMessage('Match-Cast', {
+					'%number%': x.match_number,
+					'%team1%': x.player1_discord_ids.map(r => `<@${r}>`).join(', '),
+					'%team2%': x.player2_discord_ids.map(r => `<@${r}>`).join(', '),
+					'%caster%': x.caster()
+				});
+				paste += p;
+				paste += '\n';
 				await this.sendDiscordMessage('Match-Cast', {
 					'%number%': x.match_number,
 					'%team1%': x.player1_discord_ids.map(r => `<@${r}>`).join(', '),
@@ -829,6 +887,7 @@ class ViewModel {
 			this.superStats.username(k.statsName);
 			this.superStats.pass(k.statsPass);
 			this.challonge.key(k.challonge);
+			this.workingDirectory(k.workingDirectory);
 			this.discordOptions.token(k.discord);
 		});
 	}
@@ -862,7 +921,7 @@ class ViewModel {
 			}
 			const d = p[0];
 			const e = fs.readFileSync(d,'utf8');
-			this.processCSVTeams(e,this.additiveTeamProcessing());
+			this.processCSVTeams(e/*,this.additiveTeamProcessing()*/);
 		});
 	}
 	removeTeam(team){
@@ -870,15 +929,11 @@ class ViewModel {
 	}
 	openSaveJSON(){
 		this.log('Saving to JSON');
-		dialog.showOpenDialog({
+		dialog.showSaveDialog({
 			title:'Select JSON',
 			defaultPath:this.workingDirectory()
 		},p => {
-			if(!(p && p[0])){
-				return;
-			}
-			const d = p[0];
-			fs.writeFileSync(d,ko.mapping.toJS(this.teams));
+			fs.writeFileSync(p,JSON.stringify(ko.mapping.toJS(this.teams())));
 		});
 	}
 	openLoadFromJSON(){

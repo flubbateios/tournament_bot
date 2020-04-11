@@ -10,14 +10,13 @@
   "author": "flubb",
   "license": "UNLICENSED",
   "devDependencies": {
-    "electron": "^2.0.2",
+    "electron": "^3.0.2",
     "eslint": "^5.2.0"
   },
   "dependencies": {
     "bootstrap": "^4.1.1",
     "bufferutil": "^4.0.0",
     "discord.js": "^11.3.2",
-    "erlpack": "github:hammerandchisel/erlpack",
     "jquery": "^3.3.1",
     "knockout": "^3.4.2",
     "knockout-mapping": "^2.6.0",

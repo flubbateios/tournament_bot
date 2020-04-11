@@ -2,7 +2,7 @@ Checkin-Start: Checkin has started!
 Checkin-Call: Please write something in this Discord chat to check in. The following users need to check in: %players%
 Checked-In-Player: %player% has checked in.
 Tournament-Start: The tournament has started!
-Match-Announce: Match %number%: %team1% vs. %team2%%onmap%. Please host a lobby and start immediately.
+Match-Announce: Match %number%: %team1% vs. %team2%%onmap%. Please host a lobby and await the start signal.
 Match-Started: Match %number%: %teamname1% vs. %teamname2% has started.
 Match-Ended: Match %number%: %teamname1% vs. %teamname2% has finished. Congratulations %winner%. Super Stats: %superStatsUrl%
 Match-Force: Match %number%: Result has been reported manually.
