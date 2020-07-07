@@ -10,7 +10,7 @@
   "author": "flubb",
   "license": "UNLICENSED",
   "devDependencies": {
-    "electron": "^3.0.2",
+    "electron": "^9.1.0",
     "eslint": "^5.2.0"
   },
   "dependencies": {
